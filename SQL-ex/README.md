@@ -86,6 +86,113 @@ where type in ('Laptop')
 ## Задание: 9 
 Найдите производителей ПК с процессором не менее 450 Мгц. Вывести: Maker
 ``` sql
+select distinct p.maker
+from product p
+join PC pc on p.model = pc.model
+where pc.speed >= 450
+
+```
+## Задание: 10 
+Найдите модели принтеров, имеющих самую высокую цену. Вывести: model, price
+``` sql
+SELECT DISTINCT model, price
+FROM Printer
+WHERE price = (SELECT MAX(price) 
+ FROM Printer
+ )
+
+```
+## Задание: 11 
+Найдите среднюю скорость ПК.
+``` sql
+Select AVG(speed)
+from PC
+```
+## Задание: 12 
+Найдите среднюю скорость ПК-блокнотов, цена которых превышает 1000 дол.
+``` sql
+Select avg(speed)
+from laptop
+where price > 1000
+
+```
+## Задание: 13
+Найдите среднюю скорость ПК, выпущенных производителем A.
+``` sql
+Select avg(pc.speed)
+from pc
+join product on pc.model = product.model 
+where product.maker = 'A'
+
+```
+## Задание: 14 
+Найдите класс, имя и страну для кораблей из таблицы Ships, имеющих не менее 10 орудий.
+
+``` sql
+Select s.class, s.name, c.country
+from ships s join classes c on s.class = c.class
+where c.numGuns >= 10
+
+```
+## Задание: 15
+Найдите размеры жестких дисков, совпадающих у двух и более PC. Вывести: HD
+``` sql
+Select hd
+from pc
+group by hd
+having count(model) >= 2
+
+```
+## Задание: 16
+Найдите пары моделей PC, имеющих одинаковые скорость и RAM. В результате каждая пара указывается только один раз, т.е. (i,j), но не (j,i), Порядок вывода: модель с большим номером, модель с меньшим номером, скорость и RAM.
+``` sql
+Select distinct a.model, b.model, a.speed, a.ram
+from pc a join pc b
+on a.speed = b.speed and a.ram = b.ram and a.model > b.model
+
+```
+## Задание: 17
+Найдите модели ПК-блокнотов, скорость которых меньше скорости каждого из ПК.
+Вывести: type, model, speed
+``` sql
+Select distinct p.type, l.model, l.speed
+from laptop l join product p on l.model = p.model
+where l.speed < any (select min(pc.speed)
+from pc)
+
+```
+``` sql
+Select distinct 'Laptop' as type, l.model, l.speed
+from laptop l 
+where l.speed < any (select min(pc.speed)
+from pc)
+
+```
+## 
+
+``` sql
+Select distinct p.maker, pr.price
+from product p join printer pr on p.model = pr.model
+where pr.price in (select min(price) from printer where color = 'y')
+and color = 'y'
+```
+## Задание: 19 
+Для каждого производителя, имеющего модели в таблице Laptop, найдите средний размер экрана выпускаемых им ПК-блокнотов.
+Вывести: maker, средний размер экрана.
+``` sql
+Select p.maker, avg(l.screen) as avg_screen
+from product p join laptop l on p.model = l.model
+group by p.maker
+
+```
+## Задание: 20 
+Найдите производителей, выпускающих по меньшей мере три различных модели ПК. Вывести: Maker, число моделей ПК.
+``` sql
+Select maker, count(model)
+from product
+where type = 'PC' 
+group by maker
+having count(model) >= 3
 
 ```
 ## 
@@ -103,3 +210,429 @@ where type in ('Laptop')
 ``` sql
 
 ```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+## 
+
+``` sql
+
+```
+v
