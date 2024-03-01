@@ -1153,10 +1153,32 @@ WHERE  action = 'create_order'
 GROUP BY user_id having max(time) < '2022-09-08'
 ORDER BY user_id
 ```
-## 
+## * Задача 15.
+Задание:
+
+Разбейте заказы из таблицы orders на 3 группы в зависимости от количества товаров, попавших в заказ:
+
+Малый (от 1 до 3 товаров);
+Средний (от 4 до 6 товаров);
+Большой (7 и более товаров).
+Посчитайте число заказов, попавших в каждую группу. Группы назовите соответственно «Малый», «Средний», «Большой» (без кавычек).
+
+Выведите наименования групп и число товаров в них. Колонку с наименованием групп назовите order_size, а колонку с числом заказов — orders_count.
+
+Отсортируйте полученную таблицу по колонке с числом заказов по возрастанию.
+
+Поля в результирующей таблице: order_size, orders_count
 
 ``` sql
-
+SELECT case when array_length(product_ids, 1) between 1 and
+                 3 then 'Малый'
+            when array_length(product_ids, 1) between 4 and
+                 6 then 'Средний'
+            else 'Большой' end as order_size,
+       count(order_id) as orders_count
+FROM   orders
+GROUP BY order_size
+ORDER BY orders_count
 ```
 ## 
 
