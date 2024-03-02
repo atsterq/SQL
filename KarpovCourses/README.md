@@ -1210,20 +1210,87 @@ WHERE  birth_date is not null
 GROUP BY group_age
 ORDER BY group_age
 ```
-## 
+## * Задача 17.
 
+Задание:
+
+По данным из таблицы orders рассчитайте средний размер заказа по выходным и будням.
+
+Группу с выходными днями (суббота и воскресенье) назовите «weekend», а группу с будними днями (с понедельника по пятницу) — «weekdays» (без кавычек).
+
+В результат включите две колонки: колонку с группами назовите week_part, а колонку со средним размером заказа — avg_order_size. 
+
+Средний размер заказа округлите до двух знаков после запятой.
+
+Результат отсортируйте по колонке со средним размером заказа — по возрастанию.
+
+Поля в результирующей таблице: week_part, avg_order_size
 ``` sql
-
+SELECT case when date_part('dow', creation_time)::integer in (6, 0) then 'weekend'
+            else 'weekdays' end as week_part,
+       round(avg(array_length(product_ids, 1)), 2) as avg_order_size
+FROM   orders
+GROUP BY week_part
+ORDER BY avg_order_size
 ```
-## 
+## ** Задача 18.
+Задание:
 
+Для каждого пользователя в таблице user_actions посчитайте общее количество оформленных заказов и долю отменённых заказов.
+
+Новые колонки назовите соответственно orders_count и cancel_rate. Колонку с долей отменённых заказов округлите до двух знаков после запятой.
+
+В результат включите только тех пользователей, которые оформили больше трёх заказов и у которых показатель cancel_rate составляет не менее 0.5.
+
+Результат отсортируйте по возрастанию id пользователя.
+
+Поля в результирующей таблице: user_id, orders_count, cancel_rate
 ``` sql
-
+SELECT user_id,
+       count(order_id) filter (WHERE action = 'create_order') as orders_count,
+       (count(order_id) filter (WHERE action = 'cancel_order'))::decimal / count(order_id) filter (WHERE action = 'create_order') as cancel_rate
+FROM   user_actions
+GROUP BY user_id having count(order_id) filter (
+WHERE  action = 'create_order') > 3
+   and (count(order_id) filter (
+WHERE  action = 'cancel_order'))::decimal / count(order_id) filter (
+WHERE  action = 'create_order') >= 0.5
+ORDER BY user_id
 ```
-## 
+## ** Задача 19.
+Задание:
+
+Для каждого дня недели в таблице user_actions посчитайте:
+
+Общее количество оформленных заказов.
+Общее количество отменённых заказов.
+Общее количество неотменённых заказов (т.е. доставленных).
+Долю неотменённых заказов в общем числе заказов (success rate).
+Новые колонки назовите соответственно created_orders, canceled_orders, actual_orders и success_rate. Колонку с долей неотменённых заказов округлите до трёх знаков после запятой.
+
+Все расчёты проводите за период с 24 августа по 6 сентября 2022 года включительно, чтобы во временной интервал попало равное количество разных дней недели.
+
+Группы сформируйте следующим образом: выделите день недели из даты с помощью функции to_char с параметром 'Dy', также выделите порядковый номер дня недели с помощью функции DATE_PART с параметром 'isodow'. Далее сгруппируйте данные по двум полям и проведите все необходимые расчёты.
+
+В результате должна получиться группировка по двум колонкам: с порядковым номером дней недели и их сокращёнными наименованиями.
+
+Результат отсортируйте по возрастанию порядкового номера дня недели.
+
+Поля в результирующей таблице: weekday_number, weekday, created_orders, canceled_orders, actual_orders, success_rate
 
 ``` sql
-
+SELECT date_part('isodow', time)::int as weekday_number,
+       to_char(time, 'Dy') as weekday,
+       count(order_id) filter (WHERE action = 'create_order') as created_orders,
+       count(order_id) filter (WHERE action = 'cancel_order') as canceled_orders,
+       count(order_id) filter (WHERE action = 'create_order') - count(order_id) filter (WHERE action = 'cancel_order') as actual_orders,
+       round((count(order_id) filter (WHERE action = 'create_order') - count(order_id) filter (WHERE action = 'cancel_order'))::decimal / count(order_id) filter (WHERE action = 'create_order'),
+             3) as success_rate
+FROM   user_actions
+WHERE  time >= '2022-08-24'
+   and time < '2022-09-07'
+GROUP BY weekday_number, weekday
+ORDER BY weekday_number
 ```
 ## 
 
