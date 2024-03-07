@@ -1370,17 +1370,46 @@ FROM   (SELECT user_id,
         WHERE  action = 'create_order'
         GROUP BY user_id) as t1
 ```
-## 
+## Задача 2.
 
+Задание:
+
+Повторите запрос из предыдущего задания, но теперь вместо подзапроса используйте оператор WITH и табличное выражение.
+
+Условия задачи те же: используя данные из таблицы user_actions, рассчитайте среднее число заказов всех пользователей.
+
+Полученное среднее число заказов округлите до двух знаков после запятой. Колонку с этим значением назовите orders_avg.
+
+Поле в результирующей таблице: orders_avg
 ``` sql
-
+with t1 as (SELECT user_id,
+                   count(order_id) as orders_count
+            FROM   user_actions
+            WHERE  action = 'create_order'
+            GROUP BY user_id)
+SELECT round(avg(orders_count), 2) as orders_avg
+FROM   t1
 ```
-## 
+## Задача 3.
 
+Задание:
+
+Выведите из таблицы products информацию о всех товарах кроме самого дешёвого.
+
+Результат отсортируйте по убыванию id товара.
+
+Поля в результирующей таблице: product_id, name, price
 ``` sql
-
+SELECT product_id,
+       name,
+       price
+FROM   products
+WHERE  price not in (SELECT min(price)
+                     FROM   products)
+ORDER BY product_id desc
 ```
-## 
+## Задача 4.
+
 
 ``` sql
 
