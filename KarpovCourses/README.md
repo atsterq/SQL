@@ -1468,7 +1468,12 @@ WHERE  sex = 'male'
 
 Поле в результирующей таблице: order_id
 ``` sql
-
+SELECT order_id
+FROM   user_actions
+WHERE  order_id not in (SELECT order_id
+                        FROM   user_actions
+                        WHERE  action = 'cancel_order')
+ORDER BY order_id limit 1000
 ```
 ## 
 
