@@ -1502,25 +1502,80 @@ SELECT user_id,
 FROM   t1
 ORDER BY user_id limit 1000
 ```
-## 
+## Задача 9.
+Задание:
+
+Назначьте скидку 15% на товары, цена которых превышает среднюю цену на все товары на 50 и более рублей, а также скидку 10% на товары, цена которых ниже средней на 50 и более рублей. Цену остальных товаров внутри диапазона (среднее - 50; среднее + 50) оставьте без изменений. При расчёте средней цены, округлите её до двух знаков после запятой.
+
+Выведите информацию о всех товарах с указанием старой и новой цены. Колонку с новой ценой назовите new_price.
+
+Результат отсортируйте сначала по убыванию прежней цены в колонке price, затем по возрастанию id товара.
+
+Поля в результирующей таблице: product_id, name, price, new_price
+
+
 
 ``` sql
-
+with avg_price as (SELECT round(avg(price), 2)
+                   FROM   products)
+SELECT product_id,
+       name,
+       price,
+       case when (SELECT *
+           FROM   avg_price) + 50 <= price then price * 0.85 when (SELECT *
+                                                        FROM   avg_price) - 50 >= price then price * 0.9 else price end as new_price
+FROM   products
+ORDER BY price desc, product_id
 ```
-## 
+## Задача 10.
+Задание:
+
+Выясните, есть ли в таблице courier_actions такие заказы, которые были приняты курьерами, но не были созданы пользователями. Посчитайте количество таких заказов.
+
+Колонку с числом заказов назовите orders_count.
+
+Поле в результирующей таблице: orders_count
 
 ``` sql
-
+SELECT count(order_id) as orders_count
+FROM   courier_actions
+WHERE  order_id not in (SELECT order_id
+                        FROM   user_actions
+                        WHERE  action = 'create_order')
 ```
-## 
+## Задача 11.
 
+Задание:
+
+Выясните, есть ли в таблице courier_actions такие заказы, которые были приняты курьерами, но не были доставлены пользователям. Посчитайте количество таких заказов.
+
+Колонку с числом заказов назовите orders_count.
+
+Поле в результирующей таблице: orders_count
 ``` sql
-
+SELECT count(order_id) as orders_count
+FROM   courier_actions
+WHERE  action = 'accept_order'
+   and order_id not in (SELECT order_id
+                     FROM   courier_actions
+                     WHERE  action = 'deliver_order')
 ```
-## 
+## Задача 12.
+Задание:
+
+Определите количество отменённых заказов в таблице courier_actions и выясните, есть ли в этой таблице такие заказы, которые были отменены пользователями, но при этом всё равно были доставлены. Посчитайте количество таких заказов.
+
+Колонку с отменёнными заказами назовите orders_canceled. Колонку с отменёнными, но доставленными заказами назовите orders_canceled_and_delivered. 
+
+Поля в результирующей таблице: orders_canceled, orders_canceled_and_delivered
 
 ``` sql
-
+SELECT count(distinct order_id) as orders_canceled,
+       count(order_id) filter (WHERE action = 'deliver_order') as orders_canceled_and_delivered
+FROM   courier_actions
+WHERE  order_id in (SELECT order_id
+                    FROM   user_actions
+                    WHERE  action = 'cancel_order')
 ```
 ## 
 
