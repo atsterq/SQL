@@ -1577,17 +1577,69 @@ WHERE  order_id in (SELECT order_id
                     FROM   user_actions
                     WHERE  action = 'cancel_order')
 ```
-## 
+## Задача 13.
+Задание:
+
+По таблицам courier_actions и user_actions снова определите число недоставленных заказов и среди них посчитайте количество отменённых заказов и количество заказов, которые не были отменены (и соответственно, пока ещё не были доставлены).
+
+Колонку с недоставленными заказами назовите orders_undelivered, колонку с отменёнными заказами назовите orders_canceled, колонку с заказами «в пути» назовите orders_in_process.
+
+Поля в результирующей таблице: orders_undelivered, orders_canceled, orders_in_process
+
+
 
 ``` sql
-
+SELECT count(distinct order_id) as orders_undelivered,
+       count(distinct order_id) filter (WHERE order_id in (SELECT order_id
+                                                    FROM   user_actions
+                                                    WHERE  action = 'cancel_order')) as orders_canceled, count(distinct order_id) filter (
+WHERE  order_id not in (SELECT order_id
+                        FROM   user_actions
+                        WHERE  action = 'cancel_order')) as orders_in_process
+FROM   courier_actions
+WHERE  action = 'accept_order'
+   and order_id not in (SELECT order_id
+                     FROM   courier_actions
+                     WHERE  action = 'deliver_order')
 ```
-## 
-
 ``` sql
-
+SELECT count(distinct order_id) as orders_undelivered,
+       count(order_id) filter (WHERE action = 'cancel_order') as orders_canceled,
+       count(distinct order_id) - count(order_id) filter (WHERE action = 'cancel_order') as orders_in_process
+FROM   user_actions
+WHERE  order_id in (SELECT order_id
+                    FROM   courier_actions
+                    WHERE  order_id not in (SELECT order_id
+                                            FROM   courier_actions
+                                            WHERE  action = 'deliver_order'))
 ```
-## 
+## Задача 14.
+
+Задание:
+
+Отберите из таблицы users пользователей мужского пола, которые старше всех пользователей женского пола.
+
+Выведите две колонки: id пользователя и дату рождения. Результат отсортируйте по возрастанию id пользователя.
+
+Поля в результирующей таблице: user_id, birth_date
+``` sql
+SELECT user_id,
+       birth_date
+FROM   users
+WHERE  sex = 'male'
+   and birth_date < (SELECT min(birth_date)
+                  FROM   users
+                  WHERE  sex = 'female')
+ORDER BY user_id
+```
+## Задача 15.
+Задание:
+
+Выведите id и содержимое 100 последних доставленных заказов из таблицы orders.
+
+Содержимым заказов считаются списки с id входящих в заказ товаров. Результат отсортируйте по возрастанию id заказа.
+
+Поля в результирующей таблице: order_id, product_ids
 
 ``` sql
 
