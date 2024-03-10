@@ -1642,9 +1642,21 @@ ORDER BY user_id
 Поля в результирующей таблице: order_id, product_ids
 
 ``` sql
-
+SELECT order_id,
+       product_ids
+FROM   orders
+WHERE  order_id in (SELECT order_id
+                    FROM   courier_actions
+                    WHERE  action = 'deliver_order'
+                    ORDER BY time desc limit 100)
+ORDER BY order_id
 ```
-## 
+## Задача 16.
+Задание:
+
+Из таблицы couriers выведите всю информацию о курьерах, которые в сентябре 2022 года доставили 30 и более заказов. Результат отсортируйте по возрастанию id курьера.
+
+Поля в результирующей таблице: courier_id, birth_date, sex
 
 ``` sql
 
