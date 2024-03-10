@@ -1670,8 +1670,15 @@ WHERE  courier_id in (SELECT courier_id
                          and action = 'deliver_order'
                       GROUP BY courier_id having count(order_id) >= 30)
 ```
-## 
+## Задача 17.
 
+Задание:
+
+Рассчитайте средний размер заказов, отменённых пользователями мужского пола.
+
+Средний размер заказа округлите до трёх знаков после запятой. Колонку со значением назовите avg_order_size.
+
+Поле в результирующей таблице: avg_order_size
 ``` sql
 
 ```
