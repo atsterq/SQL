@@ -1659,7 +1659,16 @@ ORDER BY order_id
 Поля в результирующей таблице: courier_id, birth_date, sex
 
 ``` sql
-
+SELECT courier_id,
+       birth_date,
+       sex
+FROM   couriers
+WHERE  courier_id in (SELECT courier_id
+                      FROM   courier_actions
+                      WHERE  time between '2022-09-01'
+                         and '2022-09-30'
+                         and action = 'deliver_order'
+                      GROUP BY courier_id having count(order_id) >= 30)
 ```
 ## 
 
