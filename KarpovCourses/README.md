@@ -1725,7 +1725,20 @@ ORDER BY user_id
 
 Поля в результирующей таблице: order_id, time_accepted, time_delivered и delivery_time
 ``` sql
-
+SELECT order_id,
+       min(time) as time_accepted,
+       max(time) as time_delivered,
+       round(extract(epoch
+FROM   (max(time) - min(time))) / 60)::int as delivery_time
+FROM   courier_actions
+WHERE  order_id in (SELECT order_id
+                    FROM   orders
+                    WHERE  array_length(product_ids, 1) > 5)
+   and order_id not in (SELECT order_id
+                     FROM   user_actions
+                     WHERE  action = 'cancel_order')
+GROUP BY order_id
+ORDER BY order_id
 ```
 ## 
 
