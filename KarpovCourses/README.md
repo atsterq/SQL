@@ -1740,10 +1740,33 @@ WHERE  order_id in (SELECT order_id
 GROUP BY order_id
 ORDER BY order_id
 ```
-## 
+## * Задача 20.
+Задание:
+
+Для каждой даты в таблице user_actions посчитайте количество первых заказов, совершённых пользователями.
+
+Первыми заказами будем считать заказы, которые пользователи сделали в нашем сервисе впервые. В расчётах учитывайте только неотменённые заказы.
+
+В результат включите две колонки: дату и количество первых заказов в эту дату. Колонку с датами назовите date, а колонку с первыми заказами — first_orders.
+
+Результат отсортируйте по возрастанию даты.
+
+Поля в результирующей таблице: date, first_orders
+
+
 
 ``` sql
-
+SELECT first_order_date as date,
+       count(user_id) as first_orders
+FROM   (SELECT user_id,
+               min(time)::date as first_order_date
+        FROM   user_actions
+        WHERE  order_id not in (SELECT order_id
+                                FROM   user_actions
+                                WHERE  action = 'cancel_order')
+        GROUP BY user_id) t
+GROUP BY first_order_date
+ORDER BY date
 ```
 ## 
 
