@@ -2114,17 +2114,89 @@ FROM   (SELECT order_id,
         ON o.product_id = p.product_id
 ORDER BY order_id, product_id limit 1000
 ```
-## 
+## Задача 13.
+Задание:
+
+Используя запрос из предыдущего задания, рассчитайте суммарную стоимость каждого заказа. Выведите колонки с id заказов и их стоимостью. Колонку со стоимостью заказа назовите order_price. Результат отсортируйте по возрастанию id заказа.
+
+Добавьте в запрос оператор LIMIT и выведите только первые 1000 строк результирующей таблицы.
+
+Поля в результирующей таблице: order_id, order_price
+``` sql
+SELECT o.order_id,
+       sum(p.price) as order_price
+FROM   (SELECT order_id,
+               unnest(product_ids) product_id
+        FROM   orders) as o join products p
+        ON o.product_id = p.product_id
+GROUP BY o.order_id
+ORDER BY o.order_id limit 1000
+```
+## Задача 14.
+Задача:
+
+Объедините запрос из предыдущего задания с частью запроса, который вы составили в задаче 11, то есть объедините запрос со стоимостью заказов с запросом, в котором вы считали размер каждого заказа из таблицы user_actions.
+
+На основе объединённой таблицы для каждого пользователя рассчитайте следующие показатели:
+
+общее число заказов — колонку назовите orders_count
+среднее количество товаров в заказе — avg_order_size
+суммарную стоимость всех покупок — sum_order_value
+среднюю стоимость заказа — avg_order_value
+минимальную стоимость заказа — min_order_value
+максимальную стоимость заказа — max_order_value
+Полученный результат отсортируйте по возрастанию id пользователя.
+
+Добавьте в запрос оператор LIMIT и выведите только первые 1000 строк результирующей таблицы.
+
+Помните, что в расчётах мы по-прежнему учитываем только неотменённые заказы. При расчёте средних значений, округляйте их до двух знаков после запятой.
+
+Поля в результирующей таблице: 
+
+user_id, orders_count, avg_order_size, sum_order_value, avg_order_value, min_order_value, max_order_value
 
 ``` sql
-
+SELECT user_id,
+       count(t1.order_id) as orders_count,
+       round(avg(avg_order_size), 2) as avg_order_size,
+       sum(price_sum) as sum_order_value,
+       round(avg(price_sum), 2) as avg_order_value,
+       min(price_sum) as min_order_value,
+       max(price_sum) as max_order_value
+FROM   (SELECT o.order_id,
+               sum(p.price) as price_sum
+        FROM   (SELECT order_id,
+                       unnest(product_ids) product_id
+                FROM   orders) as o join products p
+                ON o.product_id = p.product_id
+        GROUP BY o.order_id) t1
+    RIGHT JOIN (SELECT user_id,
+                       order_id,
+                       round(avg(array_length(product_ids, 1)), 2) as avg_order_size
+                FROM   (SELECT user_id,
+                               order_id
+                        FROM   user_actions
+                        WHERE  order_id not in (SELECT order_id
+                                                FROM   user_actions
+                                                WHERE  action = 'cancel_order')) t1
+                    LEFT JOIN orders using(order_id)
+                GROUP BY user_id, order_id) t2
+        ON t1.order_id = t2.order_id
+GROUP BY user_id
+ORDER BY user_id limit 1000
 ```
-## 
+## Задача 15.
+Задание:
 
-``` sql
+По данным таблиц orders, products и user_actions посчитайте ежедневную выручку сервиса. Под выручкой будем понимать стоимость всех реализованных товаров, содержащихся в заказах.
 
-```
-## 
+Колонку с датой назовите date, а колонку со значением выручки — revenue.
+
+В расчётах учитывайте только неотменённые заказы.
+
+Результат отсортируйте по возрастанию даты.
+
+Поля в результирующей таблице: date, revenue
 
 ``` sql
 
