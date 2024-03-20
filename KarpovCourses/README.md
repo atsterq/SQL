@@ -2199,12 +2199,50 @@ ORDER BY user_id limit 1000
 Поля в результирующей таблице: date, revenue
 
 ``` sql
-
+SELECT date(creation_time) as date,
+       sum(price) as revenue
+FROM   (SELECT order_id,
+               creation_time,
+               product_ids,
+               unnest(product_ids) as product_id
+        FROM   orders
+        WHERE  order_id not in (SELECT order_id
+                                FROM   user_actions
+                                WHERE  action = 'cancel_order')) t1
+    LEFT JOIN products using(product_id)
+GROUP BY date
 ```
-## 
+## Задача 16.
+Задание:
+
+По таблицам courier_actions , orders и products определите 10 самых популярных товаров, доставленных в сентябре 2022 года.
+
+Самыми популярными товарами будем считать те, которые встречались в заказах чаще всего. Если товар встречается в одном заказе несколько раз (было куплено несколько единиц товара), то при подсчёте учитываем только одну единицу товара.
+
+Выведите наименования товаров и сколько раз они встречались в заказах. Новую колонку с количеством покупок товара назовите times_purchased. 
+
+Поля в результирующей таблице: name, times_purchased
 
 ``` sql
+SELECT name,
+       times_purchased
+FROM   (SELECT unnest(product_ids) product_id,
+               count(o.order_id) as times_purchased
+        FROM   orders o
+        WHERE  order_id not in (SELECT order_id
+                                FROM   user_actions
+                                WHERE  action = 'cancel_order')
+           and date_part('month', creation_time) = 9
+        GROUP BY product_id
+        ORDER BY times_purchased desc limit 10) t1 left join products p
+        ON t1.product_id = p.product_id
+ORDER BY times_purchased desc
 
+SELECT unnest(product_ids) product_id,
+               count(o.order_id) as times_purchased
+        FROM   orders o
+        
+count DISTINCT product_id group by order_ida
 ```
 ## 
 
