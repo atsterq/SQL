@@ -2264,10 +2264,21 @@ FROM   (SELECT user_id,
 GROUP BY sex
 ORDER BY sex
 ```
-## 
+## Задача 18.
+Задание:
+
+По таблицам orders и courier_actions определите id десяти заказов, которые доставляли дольше всего.
+
+Поле в результирующей таблице: order_id
 
 ``` sql
-
+SELECT order_id
+FROM   (SELECT order_id,
+               time as delivery_time
+        FROM   courier_actions
+        WHERE  action = 'deliver_order') as t
+    LEFT JOIN orders using (order_id)
+ORDER BY delivery_time - creation_time desc limit 10
 ```
 ## 
 
