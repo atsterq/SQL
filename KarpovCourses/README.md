@@ -2280,7 +2280,14 @@ FROM   (SELECT order_id,
     LEFT JOIN orders using (order_id)
 ORDER BY delivery_time - creation_time desc limit 10
 ```
-## 
+## * Задача 19.
+Задача:
+
+Произведите замену списков с id товаров из таблицы orders на списки с наименованиями товаров. Наименования возьмите из таблицы products. Колонку с новыми списками наименований назовите product_names. 
+
+Добавьте в запрос оператор LIMIT и выведите только первые 1000 строк результирующей таблицы.
+
+Поля в результирующей таблице: order_id, product_names
 
 ``` sql
 
