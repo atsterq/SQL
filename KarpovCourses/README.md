@@ -2225,24 +2225,20 @@ GROUP BY date
 
 ``` sql
 SELECT name,
-       times_purchased
-FROM   (SELECT unnest(product_ids) product_id,
-               count(o.order_id) as times_purchased
-        FROM   orders o
-        WHERE  order_id not in (SELECT order_id
-                                FROM   user_actions
-                                WHERE  action = 'cancel_order')
-           and date_part('month', creation_time) = 9
-        GROUP BY product_id
-        ORDER BY times_purchased desc limit 10) t1 left join products p
-        ON t1.product_id = p.product_id
-ORDER BY times_purchased desc
-
-SELECT unnest(product_ids) product_id,
-               count(o.order_id) as times_purchased
-        FROM   orders o
-        
-count DISTINCT product_id group by order_ida
+       count(product_id) as times_purchased
+FROM   (SELECT order_id,
+               product_id,
+               name
+        FROM   (SELECT DISTINCT order_id,
+                                unnest(product_ids) as product_id
+                FROM   orders
+                    LEFT JOIN courier_actions using (order_id)
+                WHERE  action = 'deliver_order'
+                   and date_part('month', time) = 9
+                   and date_part('year', time) = 2022) t1
+            LEFT JOIN products using (product_id)) t2
+GROUP BY name
+ORDER BY times_purchased desc limit 10
 ```
 ## 
 
