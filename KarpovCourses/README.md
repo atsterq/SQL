@@ -2240,10 +2240,29 @@ FROM   (SELECT order_id,
 GROUP BY name
 ORDER BY times_purchased desc limit 10
 ```
-## 
+## Задача 17.
+Задание:
+
+Возьмите запрос, составленный на одном из прошлых уроков, и подтяните в него из таблицы users данные о поле пользователей таким образом, чтобы все пользователи из таблицы user_actions остались в результате. Затем посчитайте среднее значение cancel_rate для каждого пола, округлив его до трёх знаков после запятой. Колонку с посчитанным средним значением назовите avg_cancel_rate.
+
+Помните про отсутствие информации о поле некоторых пользователей после join, так как не все пользователи из таблицы user_action есть в таблице users. Для этой группы тоже посчитайте cancel_rate и в результирующей таблице для пустого значения в колонке с полом укажите ‘unknown’ (без кавычек). Возможно, для этого придётся вспомнить, как работает COALESCE.
+
+Результат отсортируйте по колонке с полом пользователя по возрастанию.
+
+Поля в результирующей таблице: sex, avg_cancel_rate
 
 ``` sql
-
+SELECT coalesce(sex, 'unknown') as sex,
+       round(avg(cancel_rate), 3) as avg_cancel_rate
+FROM   (SELECT user_id,
+               sex,
+               count(distinct order_id) filter (WHERE action = 'cancel_order')::decimal / count(distinct order_id) as cancel_rate
+        FROM   user_actions
+            LEFT JOIN users using(user_id)
+        GROUP BY user_id, sex
+        ORDER BY cancel_rate desc) t
+GROUP BY sex
+ORDER BY sex
 ```
 ## 
 
