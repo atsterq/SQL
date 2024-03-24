@@ -2290,12 +2290,40 @@ ORDER BY delivery_time - creation_time desc limit 10
 Поля в результирующей таблице: order_id, product_names
 
 ``` sql
-
+with o as (SELECT creation_time,
+                  order_id,
+                  unnest(product_ids) as product_id
+           FROM   orders)
+SELECT order_id,
+       array_agg(p.name) as product_names
+FROM   o join products p
+        ON o.product_id = p.product_id
+GROUP BY order_id limit 1000
 ```
-## 
+## ** Задача 20.
+Задание:
+
+Выясните, кто заказывал и доставлял самые большие заказы. Самыми большими считайте заказы с наибольшим числом товаров.
+
+Выведите id заказа, id пользователя и id курьера. Также в отдельных колонках укажите возраст пользователя и возраст курьера. Возраст измерьте числом полных лет, как мы делали в прошлых уроках. Считайте его относительно последней даты в таблице user_actions — как для пользователей, так и для курьеров. Колонки с возрастом назовите user_age и courier_age. Результат отсортируйте по возрастанию id заказа.
+
+Поля в результирующей таблице: order_id, user_id, user_age, courier_id, courier_age
 
 ``` sql
+with o as (select order_id
+from (select order_id, count(product_id) as product_count
+from (select order_id, unnest(product_ids) as product_id from orders) t1
+group by 1
+order by 2 desc) t2
 
+select o.order_id, u.user_id, u.birth_date user_age, c.courier_id, c.birth_date courier_age
+from o 
+join user_actions ua on o.order_id = ua.order_id
+join users u on ua.user_id = u.user_id
+join courier_actions ca on o.order_id = ca.order_id
+join couriers c on ca.courier_id = c.courier_id
+order by o.order_id
+limit 10
 ```
 ## 
 
