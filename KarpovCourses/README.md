@@ -2381,7 +2381,10 @@ select o1.order_id, o1.
 ## 
 
 ``` sql
+with o as (select order_id, unnest(product_ids) as product_id from orders 
+where order_id not in(select order_id from user_actions WHERE action = 'cancel_order'))
 
+select o1.order_id, o1.
 ```
 ## 
 
