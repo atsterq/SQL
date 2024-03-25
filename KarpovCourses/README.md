@@ -2310,25 +2310,73 @@ GROUP BY order_id limit 1000
 Поля в результирующей таблице: order_id, user_id, user_age, courier_id, courier_age
 
 ``` sql
-with o as (select order_id
-from (select order_id, count(product_id) as product_count
-from (select order_id, unnest(product_ids) as product_id from orders) t1
-group by 1
-order by 2 desc) t2
-
-select o.order_id, u.user_id, u.birth_date user_age, c.courier_id, c.birth_date courier_age
-from o 
-join user_actions ua on o.order_id = ua.order_id
-join users u on ua.user_id = u.user_id
-join courier_actions ca on o.order_id = ca.order_id
-join couriers c on ca.courier_id = c.courier_id
-order by o.order_id
-limit 10
+with t1 as (SELECT order_id,
+                   count(product_id) as product_count
+            FROM   (SELECT order_id,
+                           unnest(product_ids) as product_id
+                    FROM   orders) t1
+            GROUP BY 1
+            ORDER BY 2 desc), t2 as (SELECT order_id
+                         FROM   t1
+                         WHERE  product_count = (SELECT max(product_count)
+                                                 FROM   t1)), t3 as (SELECT max(time)
+                    FROM   user_actions)
+SELECT DISTINCT t2.order_id,
+                u.user_id,
+                date_part('year', age((SELECT *
+                       FROM   t3), u.birth_date))::int as user_age, c.courier_id, date_part('year', age((SELECT *
+                                                                                  FROM   t3), c.birth_date))::int as courier_age
+FROM   t2
+    LEFT JOIN user_actions ua
+        ON t2.order_id = ua.order_id
+    LEFT JOIN users u
+        ON ua.user_id = u.user_id
+    LEFT JOIN courier_actions ca
+        ON t2.order_id = ca.order_id
+    LEFT JOIN couriers c
+        ON ca.courier_id = c.courier_id
+ORDER BY t2.order_id
 ```
-## 
+``` sql
+with order_id_large_size as (SELECT order_id
+                             FROM   orders
+                             WHERE  array_length(product_ids, 1) = (SELECT max(array_length(product_ids, 1))
+                                                                    FROM   orders))
+SELECT DISTINCT order_id,
+                user_id,
+                date_part('year', age((SELECT max(time)
+                       FROM   user_actions), users.birth_date))::integer as user_age, courier_id, date_part('year', age((SELECT max(time)
+                                                                                                  FROM   user_actions), couriers.birth_date))::integer as courier_age
+FROM   (SELECT order_id,
+               user_id
+        FROM   user_actions
+        WHERE  order_id in (SELECT *
+                            FROM   order_id_large_size)) t1
+    LEFT JOIN (SELECT order_id,
+                      courier_id
+               FROM   courier_actions
+               WHERE  order_id in (SELECT *
+                                   FROM   order_id_large_size)) t2 using(order_id)
+    LEFT JOIN users using(user_id)
+    LEFT JOIN couriers using(courier_id)
+ORDER BY order_id
+```
+## ** Задача 21 SELF JOIN.
+Задание:
+
+Выясните, какие пары товаров покупают вместе чаще всего.
+
+Пары товаров сформируйте на основе таблицы с заказами. Отменённые заказы не учитывайте. В качестве результата выведите две колонки — колонку с парами наименований товаров и колонку со значениями, показывающими, сколько раз конкретная пара встретилась в заказах пользователей. Колонки назовите соответственно pair и count_pair.
+
+Пары товаров должны быть представлены в виде списков из двух наименований. Пары товаров внутри списков должны быть отсортированы в порядке возрастания наименования. Результат отсортируйте сначала по убыванию частоты встречаемости пары товаров в заказах, затем по колонке pair — по возрастанию.
+
+Поля в результирующей таблице: pair, count_pair
 
 ``` sql
+with o as (select order_id, unnest(product_ids) as product_id from orders 
+where order_id not in(select order_id from user_actions WHERE action = 'cancel_order'))
 
+select o1.order_id, o1.
 ```
 ## 
 
