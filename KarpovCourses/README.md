@@ -2373,25 +2373,75 @@ ORDER BY order_id
 Поля в результирующей таблице: pair, count_pair
 
 ``` sql
-with o as (select order_id, unnest(product_ids) as product_id from orders 
+with 
+unnest_products as (select order_id, unnest(product_ids) as product_id 
+from orders
 where order_id not in(select order_id from user_actions WHERE action = 'cancel_order'))
 
-select o1.order_id, o1.
-```
-## 
+, named_unnest_products as (select DISTINCT o.order_id, p.name, o.product_id
+from unnest_products o join products p on o.product_id = p.product_id order by p.name)
 
+, pairs as (select array[p1.name, p2.name] as pair
+from named_unnest_products p1 join named_unnest_products p2 on p1.order_id = p2.order_id
+where p1.name < p2.name )
+
+select pair, count(pair) as count_pair
+from pairs
+group by pair
+order by count_pair desc, pair
+```
+  
+Вариант решения:
 ``` sql
-with o as (select order_id, unnest(product_ids) as product_id from orders 
-where order_id not in(select order_id from user_actions WHERE action = 'cancel_order'))
-
-select o1.order_id, o1.
+with main_table as (SELECT DISTINCT order_id,
+                                    product_id,
+                                    name
+                    FROM   (SELECT order_id,
+                                   unnest(product_ids) as product_id
+                            FROM   orders
+                            WHERE  order_id not in (SELECT order_id
+                                                    FROM   user_actions
+                                                    WHERE  action = 'cancel_order')
+                               and order_id in (SELECT order_id
+                                             FROM   user_actions
+                                             WHERE  action = 'create_order')) t join products using(product_id)
+                    ORDER BY order_id, name)
+SELECT pair,
+       count(order_id) as count_pair
+FROM   (SELECT DISTINCT a.order_id,
+                        case when a.name > b.name then string_to_array(concat(b.name, '+', a.name), '+')
+                             else string_to_array(concat(a.name, '+', b.name), '+') end as pair
+        FROM   main_table a join main_table b
+                ON a.order_id = b.order_id and
+                   a.name != b.name) t
+GROUP BY pair
+ORDER BY count_pair desc, pair
 ```
-## 
+# Подведём итоги
+В этом уроке мы:
 
-``` sql
+- Познакомились с основными типами объединений таблиц, рассмотрели INNER JOIN, LEFT JOIN, FULL JOIN и CROSS JOIN.
+- Научились работать с множествами, узнали про операции UNION, EXCEPT и INTERSECT.
+- Решили большую задачу и написали полноценный аналитический запрос с объединением нескольких таблиц.
+- Познакомились с новой функцией array_agg и научились объединять значения в строках в списки.
+- Написали несколько сложных запросов и решили пару интересных задач на джойны.
+- Рассмотрели ещё один тип объединения SELF JOIN и выяснили, какие пары товаров наши пользователи покупают чаще всего.
 
-```
-## 
+Известные нам на текущий момент ключевые слова и порядок их написания в запросе:
+
+- SELECT     -- перечисление полей результирующей таблицы
+- FROM       -- указание источника данных
+- JOIN       -- объединение источника с другой таблицей
+- WHERE      -- фильтрация данных
+- GROUP BY   -- группировка данных
+- HAVING     -- фильтрация данных после группировки
+- ORDER BY   -- сортировка результирующей таблицы
+- LIMIT      -- ограничение количества выводимых записей
+
+
+Теперь можно точно сказать, что мы освоили весь базовый функционал SQL, достаточный для решения большинства аналитических задач. На следующем уроке мы поговорим об оконных функциях и узнаем, в каких случаях нам могут пригодиться навыки работы с этим продвинутым инструментом.
+
+
 
 ``` sql
 
