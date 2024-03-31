@@ -2765,22 +2765,111 @@ FROM   (SELECT courier_id,
 Поля в результирующей таблице: date, order_type, orders_count
 
 ``` sql
-
+SELECT date,
+       order_type,
+       count(*) as orders_count
+FROM   (SELECT user_id,
+               order_id,
+               time::date as date,
+               case when row_number() OVER (PARTITION BY user_id
+                                            ORDER BY time) = 1 then 'Первый'
+                    else 'Повторный' end as order_type
+        FROM   user_actions
+        WHERE  order_id not in (SELECT order_id
+                                FROM   user_actions
+                                WHERE  action = 'cancel_order')
+           and action = 'create_order') ua
+GROUP BY date, order_type
+ORDER BY date, order_type
 ```
-## 
+## Задача 11. 
+Задание:
+
+К запросу, полученному на предыдущем шаге, примените оконную функцию и для каждого дня посчитайте долю первых и повторных заказов. Сохраните структуру полученной ранее таблицы и добавьте только одну новую колонку с посчитанными значениями.
+
+Колонку с долей заказов каждой категории назовите orders_share. Значения в полученном столбце округлите до двух знаков после запятой. В результат также включите количество заказов в группах, посчитанное на предыдущем шаге.
+
+В расчётах по-прежнему учитывайте только неотменённые заказы.
+
+Результат отсортируйте сначала по возрастанию даты, затем по возрастанию значений в колонке с типом заказа.
+
+Поля в результирующей таблице: date, order_type, orders_count, orders_share
 
 ``` sql
-
+SELECT *,
+       round(orders_count / sum(orders_count) OVER (PARTITION BY date
+                                                    ORDER BY date), 2) as orders_share
+FROM   (SELECT date,
+               order_type,
+               count(*) as orders_count
+        FROM   (SELECT user_id,
+                       order_id,
+                       time::date as date,
+                       case when row_number() OVER (PARTITION BY user_id
+                                                    ORDER BY time) = 1 then 'Первый'
+                            else 'Повторный' end as order_type
+                FROM   user_actions
+                WHERE  order_id not in (SELECT order_id
+                                        FROM   user_actions
+                                        WHERE  action = 'cancel_order')) ua
+        GROUP BY date, order_type
+        ORDER BY date, order_type) ua1
 ```
-## 
+## Задача 12.
+
+Задание:
+
+Примените оконную функцию к таблице products и с помощью агрегирующей функции в отдельной колонке для каждой записи проставьте среднюю цену всех товаров. Колонку с этим значением назовите avg_price.
+
+Затем с помощью оконной функции и оператора FILTER в отдельной колонке рассчитайте среднюю цену товаров без учёта самого дорогого. Колонку с этим средним значением назовите avg_price_filtered. Полученные средние значения в колонках avg_price и avg_price_filtered округлите до двух знаков после запятой.
+
+Выведите всю информацию о товарах, включая значения в новых колонках. Результат отсортируйте сначала по убыванию цены товара, затем по возрастанию id товара.
+
+Поля в результирующей таблице: product_id, name, price, avg_price, avg_price_filtered
 
 ``` sql
-
+SELECT product_id,
+       name,
+       price,
+       round(avg(price) OVER (), 2) as avg_price ,
+       round(avg(price) filter (WHERE price != (SELECT max(price)
+                                         FROM   products))
+OVER (), 2) avg_price_filtered
+FROM   products
+ORDER BY price desc, product_id
 ```
-## 
+## * Задача 13.
 
+Задание:
+
+Для каждой записи в таблице user_actions с помощью оконных функций и предложения FILTER посчитайте, сколько заказов сделал и сколько отменил каждый пользователь на момент совершения нового действия.
+
+Иными словами, для каждого пользователя в каждый момент времени посчитайте две накопительные суммы — числа оформленных и числа отменённых заказов. Если пользователь оформляет заказ, то число оформленных им заказов увеличивайте на 1, если отменяет — увеличивайте на 1 количество отмен.
+
+Колонки с накопительными суммами числа оформленных и отменённых заказов назовите соответственно created_orders и canceled_orders. На основе этих двух колонок для каждой записи пользователя посчитайте показатель cancel_rate, т.е. долю отменённых заказов в общем количестве оформленных заказов. Значения показателя округлите до двух знаков после запятой. Колонку с ним назовите cancel_rate.
+
+В результате у вас должны получиться три новые колонки с динамическими показателями, которые изменяются во времени с каждым новым действием пользователя.
+
+В результирующей таблице отразите все колонки из исходной таблицы вместе с новыми колонками. Отсортируйте результат по колонкам user_id, order_id, time — по возрастанию значений в каждой.
+
+Добавьте в запрос оператор LIMIT и выведите только первые 1000 строк результирующей таблицы.
+
+Поля в результирующей таблице:
+
+user_id, order_id, action, time, created_orders, canceled_orders, cancel_rate
 ``` sql
-
+SELECT *,
+       round((canceled_orders::decimal/ created_orders), 2) as cancel_rate
+FROM   (SELECT user_id,
+               order_id,
+               action,
+               time ,
+               count(*) filter (WHERE action = 'create_order') OVER (PARTITION BY user_id
+                                                                     ORDER BY time) as created_orders ,
+               count(*) filter (WHERE action = 'cancel_order') OVER (PARTITION BY user_id
+                                                                     ORDER BY time) as canceled_orders
+        FROM   user_actions
+        ORDER BY user_id, order_id, time limit 1000) ua
 ```
 ## 
 
