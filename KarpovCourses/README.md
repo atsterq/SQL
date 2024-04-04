@@ -2915,10 +2915,33 @@ WHERE  courier_rank <= round((SELECT *
 Поля в результирующей таблице: courier_id, days_employed, delivered_orders
 
 ``` sql
-select courier_id, date_part('day', (select max(time) from courier_actions) - min(time))::int as days_empoyed
-, count(order_id) filter (where action = 'deliver_order') as delivered_orders
-from courier_actions
-group by courier_id
+with ca as (SELECT courier_id,
+                   date_part('day', (SELECT max(time)
+                              FROM   courier_actions) - min(time))::int as days_employed , count(order_id) filter (
+            WHERE  action = 'deliver_order') as delivered_orders
+            FROM   courier_actions
+            GROUP BY courier_id)
+SELECT *
+FROM   ca
+WHERE  days_employed >= 10
+ORDER BY days_employed desc, courier_id
+```
+Вариант верного решения:
+``` sql
+SELECT courier_id,
+       days_employed,
+       delivered_orders
+FROM   (SELECT courier_id,
+               delivered_orders,
+               date_part('days', max(max_time) OVER() - min_time)::integer as days_employed
+        FROM   (SELECT courier_id,
+                       count(distinct order_id) filter (WHERE action = 'deliver_order') as delivered_orders,
+                       min(time) as min_time,
+                       max(time) as max_time
+                FROM   courier_actions
+                GROUP BY courier_id) t1) t2
+WHERE  days_employed >= 10
+ORDER BY days_employed desc, courier_id
 ```
 ## 
 
