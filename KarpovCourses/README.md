@@ -2959,10 +2959,29 @@ ORDER BY days_employed desc, courier_id
 order_id, creation_time, order_price, daily_revenue, percentage_of_daily_revenue
 
 ``` sql
-
+SELECT order_id,
+       creation_time,
+       order_price,
+       sum(order_price) OVER(PARTITION BY date(creation_time)) as daily_revenue,
+       round(100 * order_price::decimal / sum(order_price) OVER(PARTITION BY date(creation_time)),
+             3) as percentage_of_daily_revenue
+FROM   (SELECT order_id,
+               creation_time,
+               sum(price) as order_price
+        FROM   (SELECT order_id,
+                       creation_time,
+                       product_ids,
+                       unnest(product_ids) as product_id
+                FROM   orders
+                WHERE  order_id not in (SELECT order_id
+                                        FROM   user_actions
+                                        WHERE  action = 'cancel_order')) t3
+            LEFT JOIN products using(product_id)
+        GROUP BY order_id, creation_time) t
+ORDER BY date(creation_time) desc, percentage_of_daily_revenue desc, order_id
 ```
 ## 
-
+ 
 ``` sql
 
 ```
