@@ -2980,12 +2980,67 @@ FROM   (SELECT order_id,
         GROUP BY order_id, creation_time) t
 ORDER BY date(creation_time) desc, percentage_of_daily_revenue desc, order_id
 ```
-## 
- 
-``` sql
+## Задача 17.
+Задание:
 
+На основе информации в таблицах orders и products рассчитайте ежедневную выручку сервиса и отразите её в колонке daily_revenue. Затем с помощью оконных функций и функций смещения посчитайте ежедневный прирост выручки. Прирост выручки отразите как в абсолютных значениях, так и в % относительно предыдущего дня. Колонку с абсолютным приростом назовите revenue_growth_abs, а колонку с относительным — revenue_growth_percentage.
+
+Для самого первого дня укажите прирост равным 0 в обеих колонках. При проведении расчётов отменённые заказы не учитывайте. Результат отсортируйте по колонке с датами по возрастанию.
+
+Метрики daily_revenue, revenue_growth_abs, revenue_growth_percentage округлите до одного знака при помощи ROUND().
+
+Поля в результирующей таблице: date, daily_revenue, revenue_growth_abs, revenue_growth_percentage
+``` sql
+SELECT date,
+       round(daily_revenue, 1) as daily_revenue ,
+       coalesce(round(daily_revenue - lag(daily_revenue) OVER (ORDER BY date), 1),
+                0.0) as revenue_growth_abs ,
+       coalesce(round((daily_revenue - lag(daily_revenue) OVER (ORDER BY date)) / lag(daily_revenue) OVER (ORDER BY date) * 100.0, 1),
+                0.0) as revenue_growth_percentage
+FROM   (SELECT DISTINCT date,
+                        sum(order_price) OVER(PARTITION BY date) as daily_revenue
+        FROM   (SELECT order_id,
+                       creation_time::date as date,
+                       sum(price) as order_price
+                FROM   (SELECT order_id,
+                               creation_time,
+                               product_ids,
+                               unnest(product_ids) as product_id
+                        FROM   orders
+                        WHERE  order_id not in (SELECT order_id
+                                                FROM   user_actions
+                                                WHERE  action = 'cancel_order')) t3
+                    LEFT JOIN products using(product_id)
+                GROUP BY order_id, date) t) tt
+ORDER BY date
 ```
-## 
+``` sql
+SELECT date,
+       round(daily_revenue, 1) as daily_revenue,
+       round(coalesce(daily_revenue - lag(daily_revenue, 1) OVER (ORDER BY date), 0),
+             1) as revenue_growth_abs,
+       round(coalesce(round((daily_revenue - lag(daily_revenue, 1) OVER (ORDER BY date))::decimal / lag(daily_revenue, 1) OVER (ORDER BY date) * 100, 2), 0),
+             1) as revenue_growth_percentage
+FROM   (SELECT date(creation_time) as date,
+               sum(price) as daily_revenue
+        FROM   (SELECT order_id,
+                       creation_time,
+                       product_ids,
+                       unnest(product_ids) as product_id
+                FROM   orders
+                WHERE  order_id not in (SELECT order_id
+                                        FROM   user_actions
+                                        WHERE  action = 'cancel_order')) t1
+            LEFT JOIN products using(product_id)
+        GROUP BY date) t2
+ORDER BY date
+```
+## ** Задача 18.
+Задание:
+
+С помощью оконной функции рассчитайте медианную стоимость всех заказов из таблицы orders, оформленных в нашем сервисе. В качестве результата выведите одно число. Колонку с ним назовите median_price. Отменённые заказы не учитывайте.
+
+Поле в результирующей таблице: median_price
 
 ``` sql
 
