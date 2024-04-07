@@ -3043,7 +3043,33 @@ ORDER BY date
 Поле в результирующей таблице: median_price
 
 ``` sql
-
+with orders_price as (
+SELECT
+  order_id,
+  sum(price) as order_price
+  , row_number() over (order by sum(price)) as price_rank
+  , count(order_id) over () as count
+FROM ( SELECT order_id, creation_time, product_ids, unnest(product_ids) as product_id
+    FROM
+      orders
+    WHERE
+      order_id not in (
+        SELECT
+          order_id
+        FROM
+          user_actions
+        WHERE
+          action = 'cancel_order'
+      )) t
+      LEFT JOIN products using(product_id)
+    GROUP BY
+      order_id
+    order by order_price
+)
+select order_price as median_price
+from orders_price
+where price_rank = count / 2
+-- limit 1
 ```
 ## 
 
