@@ -3066,15 +3066,88 @@ FROM ( SELECT order_id, creation_time, product_ids, unnest(product_ids) as produ
       order_id
     order by order_price
 )
+, even_rank as (
+select avg(order_price) as median_price
+from orders_price
+where price_rank in (count / 2, count / 2 + 1)
+)
+, odd_rank as (
 select order_price as median_price
 from orders_price
-where price_rank = count / 2
--- limit 1
+where price_rank = count / 2 + 1
+)
+select case when count % 2 = 0 then (select median_price from even_rank) else (select median_price from odd_rank) 
+end as median_price
+from orders_price
+limit 1
+
+```
+``` sql
+WITH main_table AS (
+  SELECT
+    order_price,
+    ROW_NUMBER() OVER (
+      ORDER BY
+        order_price
+    ) AS row_number,
+    COUNT(*) OVER() AS total_rows
+  FROM
+    (
+      SELECT
+        SUM(price) AS order_price
+      FROM
+        (
+          SELECT
+            order_id,
+            product_ids,
+            UNNEST(product_ids) AS product_id
+          FROM
+            orders
+          WHERE
+            order_id NOT IN (
+              SELECT
+                order_id
+              FROM
+                user_actions
+              WHERE
+                action = 'cancel_order'
+            )
+        ) t3
+        LEFT JOIN products USING(product_id)
+      GROUP BY
+        order_id
+    ) t1
+)
+SELECT
+  AVG(order_price) AS median_price
+FROM
+  main_table
+WHERE
+  row_number BETWEEN total_rows / 2.0
+  AND total_rows / 2.0 + 1
 ```
 ## 
 
 ``` sql
-
+SELECT date,
+       new_users,
+       new_couriers,
+       sum(new_users) OVER (ORDER BY date)::int as total_users,
+       sum(new_couriers) OVER (ORDER BY date)::int as total_couriers
+FROM   (SELECT count(user_id) as new_users,
+               date
+        FROM   (SELECT min(ua.time)::date as date,
+                       user_id -- 28, 31, 43
+                FROM   user_actions ua
+                GROUP BY 2) as ua
+        GROUP BY date) ua join (SELECT count(courier_id) as new_couriers,
+                               date
+                        FROM   (SELECT min(ca.time)::date as date,
+                                       courier_id
+                                FROM   courier_actions ca
+                                GROUP BY 2) as ca
+                        GROUP BY date) ca using(date)
+ORDER BY date
 ```
 ## 
 
