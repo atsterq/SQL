@@ -3126,7 +3126,20 @@ WHERE
   row_number BETWEEN total_rows / 2.0
   AND total_rows / 2.0 + 1
 ```
-## 
+# 1 УРОК ПОСТРОЕНИЕ ДАШБОРДОВ
+
+## Задача 1.
+Задание:
+
+Для каждого дня, представленного в таблицах user_actions и courier_actions, рассчитайте следующие показатели:
+
+Число новых пользователей.
+Число новых курьеров.
+Общее число пользователей на текущий день.
+Общее число курьеров на текущий день.
+Колонки с показателями назовите соответственно new_users, new_couriers, total_users, total_couriers. Колонку с датами назовите date. Проследите за тем, чтобы показатели были выражены целыми числами. Результат должен быть отсортирован по возрастанию даты.
+
+Поля в результирующей таблице: date, new_users, new_couriers, total_users, total_couriers
 
 ``` sql
 SELECT date,
@@ -3149,10 +3162,75 @@ FROM   (SELECT count(user_id) as new_users,
                         GROUP BY date) ca using(date)
 ORDER BY date
 ```
-## 
+Динамика новых пользователей и курьеров:
+![alt text](image.png)
+Динамика общего числа пользователей:
+![alt text](image-1.png)
+Проанализируйте построенные графики и попробуйте ответить на следующие вопросы:
+
+Что растёт быстрее: количество пользователей или количество курьеров?
+- количество пользователей
+Насколько стабильны показатели числа новых пользователей и курьеров? Нет ли в данных таких дней, когда показатели сильно выбивались из общей динамики?
+- есть дни когда динамика новых пользователей проседает
+Можно ли сказать, что показатель числа новых курьеров более стабилен, чем показатель числа новых пользователей?
+- можно
+## Задача 2.
+Задание:
+
+Дополните запрос из предыдущего задания и теперь для каждого дня, представленного в таблицах user_actions и courier_actions, дополнительно рассчитайте следующие показатели:
+
+Прирост числа новых пользователей.
+Прирост числа новых курьеров.
+Прирост общего числа пользователей.
+Прирост общего числа курьеров.
+Показатели, рассчитанные на предыдущем шаге, также включите в результирующую таблицу.
+
+Колонки с новыми показателями назовите соответственно new_users_change, new_couriers_change, total_users_growth, total_couriers_growth. Колонку с датами назовите date.
+
+Все показатели прироста считайте в процентах относительно значений в предыдущий день. При расчёте показателей округляйте значения до двух знаков после запятой.
+
+Результирующая таблица должна быть отсортирована по возрастанию даты.
+
+Поля в результирующей таблице: 
+
+date, new_users, new_couriers, total_users, total_couriers, 
+
+new_users_change, new_couriers_change, total_users_growth, total_couriers_growth
 
 ``` sql
-
+SELECT date,
+       new_users,
+       new_couriers,
+       total_users,
+       total_couriers ,
+       round(100.0 * (new_users - lag(new_users) OVER ()) / lag(new_users) OVER (),
+             2) as new_users_change ,
+       round(100.0 * (new_couriers - lag(new_couriers) OVER ()) / lag(new_couriers) OVER (),
+             2) as new_couriers_change ,
+       round(100.0 * (total_users - lag(total_users) OVER ()) / lag(total_users) OVER (),
+             2) as total_users_growth ,
+       round(100.0 * (total_couriers - lag(total_couriers) OVER ()) / lag(total_couriers) OVER (),
+             2) as total_couriers_growth
+FROM   (SELECT start_date as date,
+               new_users,
+               new_couriers,
+               (sum(new_users) OVER (ORDER BY start_date))::int as total_users,
+               (sum(new_couriers) OVER (ORDER BY start_date))::int as total_couriers
+        FROM   (SELECT start_date,
+                       count(courier_id) as new_couriers
+                FROM   (SELECT courier_id,
+                               min(time::date) as start_date
+                        FROM   courier_actions
+                        GROUP BY courier_id) t1
+                GROUP BY start_date) t2
+            LEFT JOIN (SELECT start_date,
+                              count(user_id) as new_users
+                       FROM   (SELECT user_id,
+                                      min(time::date) as start_date
+                               FROM   user_actions
+                               GROUP BY user_id) t3
+                       GROUP BY start_date) t4 using (start_date)) t
+ORDER BY date
 ```
 ## 
 
