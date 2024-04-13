@@ -3232,12 +3232,71 @@ FROM   (SELECT start_date as date,
                        GROUP BY start_date) t4 using (start_date)) t
 ORDER BY date
 ```
-## 
+![alt text](image-2.png)
+![alt text](image-3.png)
+## Задача 3.
+Задание:
+
+Для каждого дня, представленного в таблицах user_actions и courier_actions, рассчитайте следующие показатели:
+
+Число платящих пользователей.
+Число активных курьеров.
+Долю платящих пользователей в общем числе пользователей на текущий день.
+Долю активных курьеров в общем числе курьеров на текущий день.
+Колонки с показателями назовите соответственно paying_users, active_couriers, paying_users_share, active_couriers_share. Колонку с датами назовите date. Проследите за тем, чтобы абсолютные показатели были выражены целыми числами. Все показатели долей необходимо выразить в процентах. При их расчёте округляйте значения до двух знаков после запятой.
+
+Результат должен быть отсортирован по возрастанию даты. 
+
+Поля в результирующей таблице: date, paying_users, active_couriers, paying_users_share, active_couriers_share
 
 ``` sql
+with total as (SELECT date,
+       sum(new_users) OVER (ORDER BY date)::int as total_users,
+       sum(new_couriers) OVER (ORDER BY date)::int as total_couriers
+FROM   (SELECT count(user_id) as new_users,
+               date
+        FROM   (SELECT min(ua.time)::date as date,
+                       user_id
+                FROM   user_actions ua
+                GROUP BY 2) as ua
+        GROUP BY date) ua join (SELECT count(courier_id) as new_couriers,
+                               date
+                        FROM   (SELECT min(ca.time)::date as date,
+                                       courier_id
+                                FROM   courier_actions ca
+                                GROUP BY 2) as ca
+                        GROUP BY date) ca using(date)
+ORDER BY date)
+, p_users as (select DISTINCT ua.time::date as date, count(DISTINCT ua.user_id) filter (where ua.action = 'create_order') as paying_users
+from user_actions ua
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order' )
+group by date)
+, a_couriers as (select DISTINCT time::date as date, count(DISTINCT courier_id) as active_couriers
+from courier_actions
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order' )
+group by date
+order by date)
+select pu.date, paying_users, active_couriers, round(100.0 * paying_users / total_users, 2) as  paying_users_share
+, round(100.0 * active_couriers / total_couriers, 2) as active_couriers_share
+from p_users pu join a_couriers ac using(date) join total t using(date)
+order by date
 
 ```
-## 
+![alt text](image-4.png)
+![alt text](image-5.png)
+## Задача 4.
+
+Задание:
+
+Для каждого дня, представленного в таблице user_actions, рассчитайте следующие показатели:
+
+Долю пользователей, сделавших в этот день всего один заказ, в общем количестве платящих пользователей.
+Долю пользователей, сделавших в этот день несколько заказов, в общем количестве платящих пользователей.
+Колонки с показателями назовите соответственно single_order_users_share, several_orders_users_share. Колонку с датами назовите date. Все показатели с долями необходимо выразить в процентах. При расчёте долей округляйте значения до двух знаков после запятой.
+
+Результат должен быть отсортирован по возрастанию даты.
+
+Поля в результирующей таблице: date, single_order_users_share, several_orders_users_share
 
 ``` sql
 
