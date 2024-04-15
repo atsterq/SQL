@@ -3458,16 +3458,65 @@ ORDER BY date
 ![alt text](image-7.png)
 Динамика абсолютных показателей растет. Вместе с ростом количества всех заказов растут показатели числа первых заказов и числа заказов новых пользователей.
 Динамика относительных показателей вполне закономерна. В долгосрочной перспективе показатели будут снижаться, пока не выравняются на определенном уровне.
-## 
+## Задача 6.
+Задание:
+
+На основе данных в таблицах user_actions, courier_actions и orders для каждого дня рассчитайте следующие показатели:
+
+Число платящих пользователей на одного активного курьера.
+Число заказов на одного активного курьера.
+Колонки с показателями назовите соответственно users_per_courier и orders_per_courier. Колонку с датами назовите date. При расчёте показателей округляйте значения до двух знаков после запятой.
+
+Результирующая таблица должна быть отсортирована по возрастанию даты.
+
+Поля в результирующей таблице: date, users_per_courier, orders_per_courier
+
 
 ``` sql
+with paying_users_table as (select DISTINCT ua.time::date as date, count(DISTINCT ua.user_id) filter (where ua.action = 'create_order') as paying_users
+from user_actions ua
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order' )
+group by date)
+, active_couriers_table as (select DISTINCT time::date as date, count(DISTINCT courier_id) as active_couriers
+from courier_actions
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order' )
+group by date)
+, orders_count_table as (select DISTINCT creation_time::date as date, count(order_id) as orders_count
+from orders
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order' )
+group by date)
 
+select pu.date, round(1.0 * paying_users / active_couriers, 2) as users_per_courier
+, round(1.0 * orders_count / active_couriers, 2) as orders_per_courier
+from paying_users_table pu join active_couriers_table ac using(date) join orders_count_table oc using(date)
+order by date
 ```
-## 
+Динамика числа пользователей и заказов на одного курьера:
+![alt text](image-8.png)
+## Задача 7.
+Задание:
+
+На основе данных в таблице courier_actions для каждого дня рассчитайте, за сколько минут в среднем курьеры доставляли свои заказы.
+
+Колонку с показателем назовите minutes_to_deliver. Колонку с датами назовите date. При расчёте среднего времени доставки округляйте количество минут до целых значений. Учитывайте только доставленные заказы, отменённые заказы не учитывайте.
+
+Результирующая таблица должна быть отсортирована по возрастанию даты.
+
+Поля в результирующей таблице: date, minutes_to_deliver
 
 ``` sql
-
+select date, avg(minutes)::int as minutes_to_deliver
+from (
+select min(time)::date as date, order_id, extract(epoch from max(time) - min(time)) / 60 as minutes
+from courier_actions
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order' )
+group by order_id
+) t
+group by date
+order by date
 ```
+Динамика среднего времени доставки заказов:
+![alt text](image-9.png)
 ## 
 
 ``` sql
