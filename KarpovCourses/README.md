@@ -3517,10 +3517,36 @@ order by date
 ```
 Динамика среднего времени доставки заказов:
 ![alt text](image-9.png)
-## 
+## Задача 8.
+Задача:
+
+На основе данных в таблице orders для каждого часа в сутках рассчитайте следующие показатели:
+
+Число успешных (доставленных) заказов.
+Число отменённых заказов.
+Долю отменённых заказов в общем числе заказов (cancel rate).
+Колонки с показателями назовите соответственно successful_orders, canceled_orders, cancel_rate. Колонку с часом оформления заказа назовите hour. При расчёте доли отменённых заказов округляйте значения до трёх знаков после запятой.
+
+Результирующая таблица должна быть отсортирована по возрастанию колонки с часом оформления заказа.
+
+Поля в результирующей таблице: hour, successful_orders, canceled_orders, cancel_rate
 
 ``` sql
-
+SELECT hour,
+       successful_orders,
+       canceled_orders,
+       round(1.0 * canceled_orders / orders_count, 3) as cancel_rate
+FROM   (SELECT extract(hour
+        FROM   creation_time)::int as hour , count(order_id) filter (
+        WHERE  order_id not in (SELECT order_id
+                                FROM   user_actions
+                                WHERE  action = 'cancel_order')) as successful_orders , count(order_id) filter (
+        WHERE  order_id in (SELECT order_id
+                            FROM   user_actions
+                            WHERE  action = 'cancel_order')) as canceled_orders , count(order_id) as orders_count
+        FROM   orders
+        GROUP BY hour
+        ORDER BY hour) t
 ```
 ## 
 
