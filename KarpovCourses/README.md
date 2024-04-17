@@ -3548,8 +3548,11 @@ FROM   (SELECT extract(hour
         GROUP BY hour
         ORDER BY hour) t
 ```
-## 
-
+Динамика показателя cancel rate и числа успешных/отменённых заказов:
+![alt text](image-10.png)
+# Построение дашборда
+![alt text](image-11.png)
+![alt text](image-12.png)
 ``` sql
 
 ```
