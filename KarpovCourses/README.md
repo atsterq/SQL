@@ -3553,19 +3553,120 @@ FROM   (SELECT extract(hour
 # Построение дашборда
 ![alt text](image-11.png)
 ![alt text](image-12.png)
+---
+# 2 УРОК АНАЛИЗ ПРОДУКТОВЫХ МЕТРИК
+## Задача 1.
+Задание:
+
+Для каждого дня в таблице orders рассчитайте следующие показатели:
+
+Выручку, полученную в этот день.
+Суммарную выручку на текущий день.
+Прирост выручки, полученной в этот день, относительно значения выручки за предыдущий день.
+Колонки с показателями назовите соответственно revenue, total_revenue, revenue_change. Колонку с датами назовите date.
+
+Прирост выручки рассчитайте в процентах и округлите значения до двух знаков после запятой.
+
+Результат должен быть отсортирован по возрастанию даты.
+
+Поля в результирующей таблице: date, revenue, total_revenue, revenue_change
 ``` sql
+with orders_prices as (SELECT o.order_id,
+       sum(p.price) as order_price
+FROM   (SELECT order_id,
+               unnest(product_ids) product_id
+        FROM   orders) as o join products p
+        ON o.product_id = p.product_id
+GROUP BY o.order_id)
+, revenue_table as (select creation_time::date as date, sum(order_price) as revenue
+from orders join orders_prices using(order_id)
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order')
+group by date)
 
+select date, revenue, sum(revenue) over (order by date) as total_revenue
+, round(100.0 * (revenue - lag(revenue) over ()) / lag(revenue) over (), 2) as revenue_change
+from revenue_table
+order by date
 ```
-## 
+![alt text](image-13.png)
+![alt text](<Total Revenue.png>)
+## Задача 2.
+Задание:
+
+Для каждого дня в таблицах orders и user_actions рассчитайте следующие показатели:
+
+Выручку на пользователя (ARPU) за текущий день.
+Выручку на платящего пользователя (ARPPU) за текущий день.
+Выручку с заказа, или средний чек (AOV) за текущий день.
+Колонки с показателями назовите соответственно arpu, arppu, aov. Колонку с датами назовите date. 
+
+При расчёте всех показателей округляйте значения до двух знаков после запятой.
+
+Результат должен быть отсортирован по возрастанию даты. 
+
+Поля в результирующей таблице: date, arpu, arppu, aov
+
+
 
 ``` sql
+with revenue_table as (select creation_time::date as date, sum(order_price) as revenue, count(order_id) as orders_count
+from orders join (SELECT o.order_id,
+       sum(p.price) as order_price
+FROM   (SELECT order_id,
+               unnest(product_ids) product_id
+        FROM   orders) as o join products p
+        ON o.product_id = p.product_id
+GROUP BY o.order_id) t using(order_id)
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order')
+group by date)
+, paying_users_table as (
+select DISTINCT ua.time::date as date
+, count(DISTINCT ua.user_id) filter (where ua.action = 'create_order') as paying_users
+-- , count(ua.user_id)
+from user_actions ua
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order' )
+group by date order by date)
+, user_count_table as (select ua.time::date as date, count(DISTINCT user_id) as user_count
+from user_actions ua
+group by date)
 
+select uct.date, round(1.0 * rt.revenue / uct.user_count, 2) as arpu, round(1.0 * rt.revenue / put.paying_users, 2) as arppu
+, round(1.0 * rt.revenue / rt.orders_count, 2) as aov 
+from user_count_table uct join revenue_table rt using(date) join paying_users_table put using(date)
+order by date
 ```
-## 
-
+Вариант верного решения:
 ``` sql
-
+SELECT date,
+       round(revenue::decimal / users, 2) as arpu,
+       round(revenue::decimal / paying_users, 2) as arppu,
+       round(revenue::decimal / orders, 2) as aov
+FROM   (SELECT creation_time::date as date,
+               count(distinct order_id) as orders,
+               sum(price) as revenue
+        FROM   (SELECT order_id,
+                       creation_time,
+                       unnest(product_ids) as product_id
+                FROM   orders
+                WHERE  order_id not in (SELECT order_id
+                                        FROM   user_actions
+                                        WHERE  action = 'cancel_order')) t1
+            LEFT JOIN products using(product_id)
+        GROUP BY date) t2
+    LEFT JOIN (SELECT time::date as date,
+                      count(distinct user_id) as users
+               FROM   user_actions
+               GROUP BY date) t3 using (date)
+    LEFT JOIN (SELECT time::date as date,
+                      count(distinct user_id) as paying_users
+               FROM   user_actions
+               WHERE  order_id not in (SELECT order_id
+                                       FROM   user_actions
+                                       WHERE  action = 'cancel_order')
+               GROUP BY date) t4 using (date)
+ORDER BY date
 ```
+![alt text](<ARPU, ARPPU and AOV by Day.png>)
 ## 
 
 ``` sql
