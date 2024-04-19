@@ -3667,12 +3667,133 @@ FROM   (SELECT creation_time::date as date,
 ORDER BY date
 ```
 ![alt text](<ARPU, ARPPU and AOV by Day.png>)
-## 
+## * Задача 3.
+Задание:
 
+По таблицам orders и user_actions для каждого дня рассчитайте следующие показатели:
+
+Накопленную выручку на пользователя (Running ARPU).
+Накопленную выручку на платящего пользователя (Running ARPPU).
+Накопленную выручку с заказа, или средний чек (Running AOV).
+Колонки с показателями назовите соответственно running_arpu, running_arppu, running_aov. Колонку с датами назовите date. 
+
+При расчёте всех показателей округляйте значения до двух знаков после запятой.
+
+Результат должен быть отсортирован по возрастанию даты. 
+
+Поля в результирующей таблице: date, running_arpu, running_arppu, running_aov
 ``` sql
-
+with new_users_table as (SELECT date,
+                                count(user_id) as new_users
+                         FROM   (SELECT min(ua.time)::date as date ,
+                                        user_id
+                                 FROM   user_actions ua
+                                 GROUP BY user_id) as ua
+                         GROUP BY date
+                         ORDER BY date) , new_paying_users_table as (SELECT date,
+                                                   count(user_id) as new_paying_users
+                                            FROM   (SELECT min(time) filter (WHERE order_id not in (SELECT order_id
+                                                                                                            FROM   user_actions
+                                                                                                            WHERE  action = 'cancel_order'))::date as date, user_id
+                                                    FROM   user_actions
+                                                    GROUP BY user_id) t
+                                            GROUP BY date
+                                            ORDER BY date)
+SELECT date,
+       round(1.0 * sum(revenue) OVER(ORDER BY date) / sum(nut.new_users) OVER (ORDER BY date),
+             2) as running_arpu,
+       round(1.0 * sum(revenue) OVER (ORDER BY date) / sum(nput.new_paying_users) OVER (ORDER BY date),
+             2) as running_arppu,
+       round(1.0 * sum(revenue) OVER (ORDER BY date) / sum(orders) OVER (ORDER BY date),
+             2) as running_aov
+FROM   (SELECT creation_time::date as date,
+               count(distinct order_id) as orders,
+               sum(price) as revenue
+        FROM   (SELECT order_id,
+                       creation_time,
+                       unnest(product_ids) as product_id
+                FROM   orders
+                WHERE  order_id not in (SELECT order_id
+                                        FROM   user_actions
+                                        WHERE  action = 'cancel_order')) t1
+            LEFT JOIN products using(product_id)
+        GROUP BY date) t2
+    LEFT JOIN new_users_table nut using (date)
+    LEFT JOIN new_paying_users_table nput using (date)
+ORDER BY date
 ```
-## 
+Вариант верного решения:
+``` sql
+SELECT date,
+       round(sum(revenue) OVER (ORDER BY date)::decimal / sum(new_users) OVER (ORDER BY date),
+             2) as running_arpu,
+       round(sum(revenue) OVER (ORDER BY date)::decimal / sum(new_paying_users) OVER (ORDER BY date),
+             2) as running_arppu,
+       round(sum(revenue) OVER (ORDER BY date)::decimal / sum(orders) OVER (ORDER BY date),
+             2) as running_aov
+FROM   (SELECT creation_time::date as date,
+               count(distinct order_id) as orders,
+               sum(price) as revenue
+        FROM   (SELECT order_id,
+                       creation_time,
+                       unnest(product_ids) as product_id
+                FROM   orders
+                WHERE  order_id not in (SELECT order_id
+                                        FROM   user_actions
+                                        WHERE  action = 'cancel_order')) t1
+            LEFT JOIN products using(product_id)
+        GROUP BY date) t2
+    LEFT JOIN (SELECT time::date as date,
+                      count(distinct user_id) as users
+               FROM   user_actions
+               GROUP BY date) t3 using (date)
+    LEFT JOIN (SELECT time::date as date,
+                      count(distinct user_id) as paying_users
+               FROM   user_actions
+               WHERE  order_id not in (SELECT order_id
+                                       FROM   user_actions
+                                       WHERE  action = 'cancel_order')
+               GROUP BY date) t4 using (date)
+    LEFT JOIN (SELECT date,
+                      count(user_id) as new_users
+               FROM   (SELECT user_id,
+                              min(time::date) as date
+                       FROM   user_actions
+                       GROUP BY user_id) t5
+               GROUP BY date) t6 using (date)
+    LEFT JOIN (SELECT date,
+                      count(user_id) as new_paying_users
+               FROM   (SELECT user_id,
+                              min(time::date) as date
+                       FROM   user_actions
+                       WHERE  order_id not in (SELECT order_id
+                                               FROM   user_actions
+                                               WHERE  action = 'cancel_order')
+                       GROUP BY user_id) t7
+               GROUP BY date) t8 using (date)
+```
+![alt text](image-14.png)
+## Задача 4.
+Задание:
+
+Для каждого дня недели в таблицах orders и user_actions рассчитайте следующие показатели:
+
+Выручку на пользователя (ARPU).
+Выручку на платящего пользователя (ARPPU).
+Выручку на заказ (AOV).
+При расчётах учитывайте данные только за период с 26 августа 2022 года по 8 сентября 2022 года включительно — так, чтобы в анализ попало одинаковое количество всех дней недели (ровно по два дня).
+
+В результирующую таблицу включите как наименования дней недели (например, Monday), так и порядковый номер дня недели (от 1 до 7, где 1 — это Monday, 7 — это Sunday).
+
+Колонки с показателями назовите соответственно arpu, arppu, aov. Колонку с наименованием дня недели назовите weekday, а колонку с порядковым номером дня недели weekday_number.
+
+При расчёте всех показателей округляйте значения до двух знаков после запятой.
+
+Результат должен быть отсортирован по возрастанию порядкового номера дня недели.
+
+Поля в результирующей таблице: 
+
+weekday, weekday_number, arpu, arppu, aov
 
 ``` sql
 
