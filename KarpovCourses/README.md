@@ -3796,13 +3796,145 @@ FROM   (SELECT creation_time::date as date,
 weekday, weekday_number, arpu, arppu, aov
 
 ``` sql
-
+SELECT weekday,
+       t2.weekday_number,
+       round(revenue::decimal / users, 2) as arpu,
+       round(revenue::decimal / paying_users, 2) as arppu,
+       round(revenue::decimal / orders, 2) as aov
+FROM   (SELECT to_char(creation_time, 'Day') as weekday,
+               date_part('isodow', creation_time) as weekday_number,
+               count(distinct order_id) as orders,
+               sum(price) as revenue
+        FROM   (SELECT order_id,
+                       creation_time,
+                       unnest(product_ids) as product_id
+                FROM   orders
+                WHERE  order_id not in (SELECT order_id
+                                        FROM   user_actions
+                                        WHERE  action = 'cancel_order')
+                   and creation_time between '2022-08-26'
+                   and '2022-09-09') t1
+            LEFT JOIN products using(product_id)
+        GROUP BY weekday, weekday_number) t2
+    LEFT JOIN (SELECT to_char(time, 'Day') as weekday,
+                      date_part('isodow', time) as weekday_number,
+                      count(distinct user_id) as users
+               FROM   user_actions
+               WHERE  time between '2022-08-26'
+                  and '2022-09-09'
+               GROUP BY weekday, weekday_number) t3 using (weekday)
+    LEFT JOIN (SELECT to_char(time, 'Day') as weekday,
+                      date_part('isodow', time) as weekday_number,
+                      count(distinct user_id) as paying_users
+               FROM   user_actions
+               WHERE  order_id not in (SELECT order_id
+                                       FROM   user_actions
+                                       WHERE  action = 'cancel_order')
+                  and time between '2022-08-26'
+                  and '2022-09-09'
+               GROUP BY weekday, weekday_number) t4 using (weekday)
+ORDER BY t2.weekday_number
 ```
-## 
+![alt text](<ARPU, ARPPU and AOV by Weekday_ZFbXIP1.png>)
+## * Задача 5.
+Задание:
 
+Для каждого дня в таблицах orders и user_actions рассчитайте следующие показатели:
+
+Выручку, полученную в этот день.
+Выручку с заказов новых пользователей, полученную в этот день.
+Долю выручки с заказов новых пользователей в общей выручке, полученной за этот день.
+Долю выручки с заказов остальных пользователей в общей выручке, полученной за этот день.
+Колонки с показателями назовите соответственно revenue, new_users_revenue, new_users_revenue_share, old_users_revenue_share. Колонку с датами назовите date. 
+
+Все показатели долей необходимо выразить в процентах. При их расчёте округляйте значения до двух знаков после запятой.
+
+Результат должен быть отсортирован по возрастанию даты.
+
+Поля в результирующей таблице:
+
+date, revenue, new_users_revenue, new_users_revenue_share, old_users_revenue_share
 ``` sql
+with orders_prices_table as (SELECT o.order_id,
+       sum(p.price) as order_price
+FROM   (SELECT order_id,
+               unnest(product_ids) product_id
+        FROM   orders) as o join products p
+        ON o.product_id = p.product_id
+GROUP BY o.order_id)
+, new_users_table as (SELECT user_id, min(time::date) as date
+                       FROM   user_actions
+                       GROUP BY user_id)
+, users_orders_prices_table as (select user_id, time::date as date, sum(order_price) as daily_order_price
+from user_actions join orders_prices_table using(order_id)
+where action = 'create_order' and order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order')
+group by user_id, date)
+, revenue_table as (select creation_time::date as date, sum(order_price) as revenue
+from orders join orders_prices_table using(order_id)
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order')
+group by date)
+, new_users_revenue_table as (select nut.date as date, sum(daily_order_price) as new_users_revenue
+from new_users_table nut left join users_orders_prices_table uopt on nut.user_id = uopt.user_id and nut.date = uopt.date
+group by nut.date)
 
+select rt.date, revenue, new_users_revenue, round(100.0 * new_users_revenue / revenue, 2) as new_users_revenue_share,
+100 - round(100.0 * new_users_revenue / revenue, 2) as old_users_revenue_share
+from revenue_table rt join new_users_revenue_table using(date)
+order by date
 ```
+Вариант верного решения:
+``` sql
+SELECT date,
+       revenue,
+       new_users_revenue,
+       round(new_users_revenue / revenue * 100, 2) as new_users_revenue_share,
+       100 - round(new_users_revenue / revenue * 100, 2) as old_users_revenue_share
+FROM   (SELECT creation_time::date as date,
+               sum(price) as revenue
+        FROM   (SELECT order_id,
+                       creation_time,
+                       unnest(product_ids) as product_id
+                FROM   orders
+                WHERE  order_id not in (SELECT order_id
+                                        FROM   user_actions
+                                        WHERE  action = 'cancel_order')) t3
+            LEFT JOIN products using (product_id)
+        GROUP BY date) t1
+    LEFT JOIN (SELECT start_date as date,
+                      sum(revenue) as new_users_revenue
+               FROM   (SELECT t5.user_id,
+                              t5.start_date,
+                              coalesce(t6.revenue, 0) as revenue
+                       FROM   (SELECT user_id,
+                                      min(time::date) as start_date
+                               FROM   user_actions
+                               GROUP BY user_id) t5
+                           LEFT JOIN (SELECT user_id,
+                                             date,
+                                             sum(order_price) as revenue
+                                      FROM   (SELECT user_id,
+                                                     time::date as date,
+                                                     order_id
+                                              FROM   user_actions
+                                              WHERE  order_id not in (SELECT order_id
+                                                                      FROM   user_actions
+                                                                      WHERE  action = 'cancel_order')) t7
+                                          LEFT JOIN (SELECT order_id,
+                                                            sum(price) as order_price
+                                                     FROM   (SELECT order_id,
+                                                                    unnest(product_ids) as product_id
+                                                             FROM   orders
+                                                             WHERE  order_id not in (SELECT order_id
+                                                                                     FROM   user_actions
+                                                                                     WHERE  action = 'cancel_order')) t9
+                                                         LEFT JOIN products using (product_id)
+                                                     GROUP BY order_id) t8 using (order_id)
+                                      GROUP BY user_id, date) t6
+                               ON t5.user_id = t6.user_id and
+                                  t5.start_date = t6.date) t4
+               GROUP BY start_date) t2 using (date)
+```
+![alt text](<Revenue from New Users_jS4KxET.png>)
 ## 
 
 ``` sql
