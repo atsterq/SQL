@@ -3935,11 +3935,39 @@ FROM   (SELECT creation_time::date as date,
                GROUP BY start_date) t2 using (date)
 ```
 ![alt text](<Revenue from New Users_jS4KxET.png>)
-## 
+## Задача 6.
+Задание:
+
+Для каждого товара, представленного в таблице products, за весь период времени в таблице orders рассчитайте следующие показатели:
+
+Суммарную выручку, полученную от продажи этого товара за весь период.
+Долю выручки от продажи этого товара в общей выручке, полученной за весь период.
+Колонки с показателями назовите соответственно revenue и share_in_revenue. Колонку с наименованиями товаров назовите product_name.
+
+Долю выручки с каждого товара необходимо выразить в процентах. При её расчёте округляйте значения до двух знаков после запятой.
+
+Товары, округлённая доля которых в выручке составляет менее 0.5%, объедините в общую группу с названием «ДРУГОЕ» (без кавычек), просуммировав округлённые доли этих товаров.
+
+Результат должен быть отсортирован по убыванию выручки от продажи товара.
+
+Поля в результирующей таблице: product_name, revenue, share_in_revenue
 
 ``` sql
+with t as (select order_id, p.product_id,name as product_name, price
+from (select order_id, unnest(product_ids) as product_id from orders
+WHERE order_id not in (SELECT order_id FROM user_actions WHERE  action = 'cancel_order')) o
+join products p using(product_id))
 
+select product_name, sum(revenue) as revenue, sum(share_in_revenue) as share_in_revenue
+from(
+select case when round(100.0 * revenue / sum(revenue) over (), 2) > 0.5 then product_name else 'ДРУГОЕ' end as product_name
+, revenue, round(100.0 * revenue / sum(revenue) over (), 2) as share_in_revenue
+from (select product_name, sum(price) as revenue from t group by product_name) t1
+) t2
+group by product_name
+order by revenue desc
 ```
+![alt text](image-15.png)
 ## 
 
 ``` sql
