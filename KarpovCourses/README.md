@@ -4033,10 +4033,39 @@ from(select date, revenue, costs, tax, revenue - costs - tax as gross_profit
 from revenue_tax_table join costs_table using(date)) t
 order by date
 ```
-## 
-
 ``` sql
+with revenue_tax_table as (select creation_time::date as date, sum(order_price) as revenue, sum(order_tax) as tax
+from orders join (SELECT o.order_id, sum(p.price) as order_price, sum(p.tax) as order_tax
+FROM   (SELECT order_id, unnest(product_ids) as product_id FROM   orders) as o join (SELECT product_id, name, price
+, case when name in ('сахар', 'сухарики', 'сушки', 'семечки', 'масло льняное', 'виноград', 'масло оливковое', 'арбуз', 'батон', 'йогурт', 'сливки', 'гречка', 'овсянка', 'макароны', 'баранина', 'апельсины', 'бублики', 'хлеб', 'горох', 'сметана', 'рыба копченая', 'мука', 'шпроты', 'сосиски', 'свинина', 'рис', 'масло кунжутное', 'сгущенка', 'ананас', 'говядина', 'соль', 'рыба вяленая', 'масло подсолнечное', 'яблоки', 'груши', 'лепешка', 'молоко', 'курица', 'лаваш', 'вафли', 'мандарины') then round(price / 1.1 * 0.1, 2)
+else round(price / 1.2 * 0.2, 2) end as tax
+FROM   products) as p using(product_id)
+GROUP BY o.order_id) t using(order_id)
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order')
+group by date)
+, costs_table as (select date, case when date BETWEEN '2022-08-01' and '2022-08-31' then 120000 + sum(variable_costs) else 150000 + sum(variable_costs) end as costs
+from (select date, courier_id
+, case when date BETWEEN '2022-08-01' and '2022-08-31' then 
+case when courier_orders_count >= 5 then (140 + 150) * courier_orders_count + 400 else (140 + 150) * courier_orders_count end
+else
+case when courier_orders_count >= 5 then (115 + 150) * courier_orders_count + 500 else (115 + 150) * courier_orders_count end
+end as variable_costs
+from (select time::date as date, courier_id, count(ORDER_id) as courier_orders_count
+from courier_actions
+where order_id not in (SELECT order_id FROM user_actions WHERE action = 'cancel_order') and action = 'deliver_order'
+group by date, courier_id) ca) costs_table
+group by date)
 
+
+
+select date, revenue, costs, tax, gross_profit
+, sum(revenue) over (order by date) as total_revenue, sum(costs) over (order by date) as total_costs
+, sum(tax) over (order by date) as total_tax, sum(gross_profit) over (order by date) as total_gross_profit
+, round(100.0 * gross_profit / revenue, 2) as gross_profit_ratio
+, round(100.0 * sum(gross_profit) over (order by date) / sum(revenue) over (order by date), 2) as total_gross_profit_ratio
+from(select date, revenue, costs, tax, revenue - costs - tax as gross_profit
+from revenue_tax_table join costs_table using(date)) t
+order by date
 ```
 ## 
 
