@@ -4316,7 +4316,31 @@ order by avg_check desc
 Поля в результирующей таблице: start_month, start_date, day_number, retention
 
 ``` sql
-
+SELECT to_char(date_trunc('month', start_date), 'YYYY-MM-DD') as start_month,
+       start_date,
+       row_number() OVER (PARTITION BY start_date) - 1 as day_number,
+       cast((count(distinct user_id) * 1.0 / max(count(distinct user_id)) OVER (PARTITION BY start_date)) as decimal(10, 2)) as retention
+FROM   (SELECT user_id,
+               min(time::date) OVER (PARTITION BY user_id) as start_date,
+               time::date as dt
+        FROM   user_actions) t
+GROUP BY start_date, dt
+ORDER BY start_date, day_number;
+```
+Вариант верного решения:
+``` sql
+SELECT date_trunc('month', start_date)::date as start_month,
+       start_date,
+       date - start_date as day_number,
+       round(users::decimal / max(users) OVER (PARTITION BY start_date), 2) as retention
+FROM   (SELECT start_date,
+               time::date as date,
+               count(distinct user_id) as users
+        FROM   (SELECT user_id,
+                       time::date,
+                       min(time::date) OVER (PARTITION BY user_id) as start_date
+                FROM   user_actions) t1
+        GROUP BY start_date, time::date) t2
 ```
 ![alt text](<Retention Practice.png>)
 ## 
