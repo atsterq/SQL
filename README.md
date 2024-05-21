@@ -1,6 +1,5 @@
 # SQL practice and problem solving from various resources
-
-- [Leetcode](Leetcode/README.md).
-- [LearnDB](LearnDB/README.md).
-- [KarpovCourses](KarpovCourses/README.md).
+- [LearnDB](LearnDB/README.md) - full complition.
+- [KarpovCourses](KarpovCourses/README.md) - full complition.
 - [SQL-ex](SQL-ex/README.md).
+- [Leetcode](Leetcode/README.md).
