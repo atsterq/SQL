@@ -362,13 +362,18 @@ select round(avg(t1.case) * 100.00, 2) as immediate_percentage
 from t1
 where t1.order_rank = 1
 ```
-## 
+## 1204. Last Person to Fit in the Bus
 postgreslq:
 ``` sql
-
-```
-pandas:
-``` python
+select person_name from (
+select case when total_weight <= 1000 and lead > 1000 then person_name
+when total_weight < 1000 and turn = max_turn then person_name end as person_name
+from (
+select *, lead(total_weight) over(), max(turn) over () as max_turn
+from (
+select *, sum(weight) over (order by turn) as total_weight
+from queue) t) tt) ttt
+where person_name is not null
 
 ```
 ## 
