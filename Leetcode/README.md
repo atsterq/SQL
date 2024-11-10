@@ -376,49 +376,36 @@ from queue) t) tt) ttt
 where person_name is not null
 
 ```
-## 
+## 1907. Count Salary Categories
 postgreslq:
 ``` sql
-
+SELECT
+t2.category,
+case when t.accounts_count>0 then t.accounts_count else 0 end AS accounts_count
+FROM
+(SELECT
+CASE
+WHEN income < 20000 THEN 'Low Salary'
+WHEN income BETWEEN 20000 AND 50000 THEN 'Average Salary'
+WHEN income > 50000 THEN 'High Salary'
+END AS category,
+COUNT(income) AS accounts_count
+FROM accounts
+GROUP BY category) t
+RIGHT JOIN
+(SELECT 'Low Salary' AS category
+UNION ALL
+SELECT 'Average Salary' AS category
+UNION ALL
+SELECT 'High Salary' AS category) t2
+ON t.category = t2.category;
 ```
-pandas:
-``` python
-
-```
-## 
+## 1527. Patients With a Condition
 postgreslq:
 ``` sql
-
-```
-pandas:
-``` python
-
-```
-## 
-postgreslq:
-``` sql
-
-```
-pandas:
-``` python
-
-```
-## 
-postgreslq:
-``` sql
-
-```
-pandas:
-``` python
-
-```
-## 
-postgreslq:
-``` sql
-
-```
-pandas:
-``` python
+select patient_id, patient_name, conditions
+from patients
+where conditions like 'DIAB1%' or conditions like '% DIAB1%'
 
 ```
 ## 
@@ -426,8 +413,9 @@ postgreslq:
 ``` sql
 
 ```
-pandas:
-``` python
+## 
+postgreslq:
+``` sql
 
 ```
 ## 
@@ -435,7 +423,38 @@ postgreslq:
 ``` sql
 
 ```
-pandas:
-``` python
+## 
+postgreslq:
+``` sql
+
+```
+## 
+postgreslq:
+``` sql
+
+```
+## 
+postgreslq:
+``` sql
+
+```
+## 
+postgreslq:
+``` sql
+
+```
+## 
+postgreslq:
+``` sql
+
+```
+## 
+postgreslq:
+``` sql
+
+```
+## 
+postgreslq:
+``` sql
 
 ```
